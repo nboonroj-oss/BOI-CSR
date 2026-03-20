@@ -1,0 +1,116 @@
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import Papa from 'papaparse';
+import { Project } from './types';
+import { projects as initialProjects } from './data';
+
+interface ProjectContextType {
+  projects: Project[];
+  updateProjectImage: (id: string, imageUrl: string) => void;
+  isLoading: boolean;
+  error: string | null;
+}
+
+const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
+
+const SHEET_URL = 'https://docs.google.com/spreadsheets/d/12NCJM4W23nw9Rj1XjiSYmqHb8JaK5EdKUl0qkIJZ6zM/export?format=csv&gid=0';
+
+export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [projects, setProjects] = useState<Project[]>(initialProjects);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Local overrides for images
+  const [imageOverrides, setImageOverrides] = useState<Record<string, string>>(() => {
+    const saved = localStorage.getItem('boi_csr_image_overrides');
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  useEffect(() => {
+    localStorage.setItem('boi_csr_image_overrides', JSON.stringify(imageOverrides));
+  }, [imageOverrides]);
+
+  const fetchProjects = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(SHEET_URL);
+      const csvText = await response.text();
+      
+      Papa.parse(csvText, {
+        header: true,
+        skipEmptyLines: true,
+        transformHeader: (header) => header.trim(),
+        complete: (results) => {
+          const parsedProjects = results.data
+            .map((row: any) => {
+              const id = row['ลำดับ'] || Math.random().toString(36).substr(2, 9);
+              return {
+                id,
+                status: row['สถานะโครงการ'] || '',
+                title: row['ชื่อโครงการ'] || '',
+                province: row['จังหวัด'] || '',
+                organization: row['องค์กรท้องถิ่นที่ขอรับการสนับสนุน'] || '',
+                groupType: row['ประเภทกลุ่ม'] || '',
+                businessType: row['ประเภทธุรกิจ'] || '',
+                product: row['กิจการ/ผลผลิต'] || '',
+                budget: Number(String(row['มูลค่าโครงการ ก่อน vat'] || '0').replace(/,/g, '').replace(/[^\d.]/g, '')) || 0,
+                partners: row['ภาคีผู้ส่งเสริม'] || '',
+                sponsors: row['บริษัทผู้สนับสนุน'] || '',
+                description: row['เนื้อหาโดยย่อ'] || '',
+                grade: row['Grade'] || '',
+                oneDriveLink: row['Link OneDrive'] || '',
+                image: imageOverrides[id] || 'https://images.unsplash.com/photo-1500651230702-0e2d8a49d4ad?q=80&w=2070&auto=format&fit=crop',
+              };
+            })
+            .filter((p: any) => p.status === 'พร้อมเสนอบริษัท');
+          
+          if (parsedProjects.length > 0) {
+            setProjects(parsedProjects);
+          }
+          setIsLoading(false);
+        },
+        error: (err: any) => {
+          console.error('CSV Parsing Error:', err);
+          setError('Failed to parse Google Sheet data.');
+          setIsLoading(false);
+        }
+      });
+    } catch (err) {
+      console.error('Fetch Error:', err);
+      setError('Failed to connect to Google Sheets.');
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProjects();
+  }, []);
+
+  // Re-apply overrides when projects or overrides change
+  useEffect(() => {
+    setProjects(prev => prev.map(p => ({
+      ...p,
+      image: imageOverrides[p.id] || p.image
+    })));
+  }, [imageOverrides]);
+
+  const updateProjectImage = (id: string, imageUrl: string) => {
+    setImageOverrides(prev => ({
+      ...prev,
+      [id]: imageUrl
+    }));
+  };
+
+  return (
+    <ProjectContext.Provider value={{ projects, updateProjectImage, isLoading, error }}>
+      {children}
+    </ProjectContext.Provider>
+  );
+};
+
+export const useProjects = () => {
+  const context = useContext(ProjectContext);
+  if (!context) {
+    throw new Error('useProjects must be used within a ProjectProvider');
+  }
+  return context;
+};
