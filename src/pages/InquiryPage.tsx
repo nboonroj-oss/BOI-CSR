@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { Trash2, Send, ShieldCheck, PlusCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../firebase';
 import { useCart } from '../CartContext';
 
 export const InquiryPage: React.FC = () => {
-  const { cart, removeFromCart } = useCart();
+  const { cart, removeFromCart, clearCart } = useCart();
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [formData, setFormData] = useState({ name: '', email: '' });
@@ -16,31 +18,46 @@ export const InquiryPage: React.FC = () => {
     
     setIsSending(true);
     try {
-      const response = await fetch('/api/send-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          projects: cart.map(p => ({
-            title: p.title,
-            province: p.province,
-            budget: p.budget,
-            organization: p.organization,
-          })),
-        }),
+      // 1. Save to Firestore
+      await addDoc(collection(db, 'inquiries'), {
+        name: formData.name,
+        email: formData.email,
+        projects: cart.map(p => ({
+          title: p.title,
+          province: p.province,
+          budget: p.budget,
+          organization: p.organization,
+        })),
+        createdAt: serverTimestamp(),
       });
 
-      if (response.ok) {
-        setIsSubmitted(true);
-      } else {
-        alert('เกิดข้อผิดพลาดในการส่งข้อมูล กรุณาลองใหม่อีกครั้ง');
+      // 2. Also call the email API (optional backup)
+      try {
+        await fetch('/api/send-email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: formData.name,
+            email: formData.email,
+            projects: cart.map(p => ({
+              title: p.title,
+              province: p.province,
+              budget: p.budget,
+              organization: p.organization,
+            })),
+          }),
+        });
+      } catch (emailErr) {
+        console.warn('Email backup failed, but data was saved to Firestore:', emailErr);
       }
+
+      setIsSubmitted(true);
+      clearCart();
     } catch (error) {
-      console.error('Error sending email:', error);
-      alert('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กรุณาลองใหม่อีกครั้ง');
+      console.error('Error saving inquiry:', error);
+      alert('เกิดข้อผิดพลาดในการส่งข้อมูล กรุณาลองใหม่อีกครั้ง');
     } finally {
       setIsSending(false);
     }

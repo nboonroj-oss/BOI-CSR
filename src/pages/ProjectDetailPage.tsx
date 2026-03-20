@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, CloudDownload, PlusCircle, CheckCircle } from 'lucide-react';
+import { ArrowLeft, CloudDownload, PlusCircle, CheckCircle, ArrowRight } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useProjects } from '../ProjectContext';
 import { useCart } from '../CartContext';
@@ -123,27 +123,29 @@ export const ProjectDetailPage: React.FC = () => {
           <h3 className="text-4xl font-bold text-primary">สนใจร่วมสนับสนุนโครงการนี้?</h3>
           <p className="text-2xl text-on-surface-variant">บันทึกโครงการเพื่อรวบรวมข้อมูลสำหรับยื่นคำขอรับการสนับสนุน</p>
         </div>
-        <button 
-          onClick={() => addToCart(project)}
-          disabled={!!isInCart}
-          className={`w-full md:w-auto min-h-[4.5rem] px-12 py-5 rounded-2xl font-bold text-3xl shadow-lg transition-all flex items-center justify-center gap-4 active:scale-95 ${
-            isInCart 
-              ? 'bg-green-600 text-white cursor-default' 
-              : 'bg-primary text-on-primary hover:opacity-90'
-          }`}
-        >
           {isInCart ? (
-            <>
-              <CheckCircle className="w-8 h-8" />
-              Added to List
-            </>
+            <div className="flex flex-col gap-4 w-full md:w-auto">
+              <div className="bg-green-600 text-white px-12 py-5 rounded-2xl font-bold text-3xl shadow-lg flex items-center justify-center gap-4">
+                <CheckCircle className="w-8 h-8" />
+                Added to List
+              </div>
+              <Link 
+                to="/inquiry"
+                className="bg-secondary-container text-on-secondary-container px-12 py-5 rounded-2xl font-bold text-3xl shadow-lg flex items-center justify-center gap-4 hover:brightness-95 transition-all"
+              >
+                Go to Inquiry List
+                <ArrowRight className="w-8 h-8" />
+              </Link>
+            </div>
           ) : (
-            <>
+            <button 
+              onClick={() => addToCart(project)}
+              className="w-full md:w-auto min-h-[4.5rem] px-12 py-5 rounded-2xl font-bold text-3xl shadow-lg transition-all flex items-center justify-center gap-4 active:scale-95 bg-primary text-on-primary hover:opacity-90"
+            >
               <PlusCircle className="w-8 h-8" />
               Add to Inquiry List
-            </>
+            </button>
           )}
-        </button>
       </motion.div>
     </motion.div>
   );

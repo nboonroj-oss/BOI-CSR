@@ -1,0 +1,71 @@
+{
+  "entities": {
+    "ImageOverride": {
+      "title": "Image Override",
+      "description": "Stores custom image URLs for projects to override the default ones from Google Sheets.",
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "description": "The unique ID of the project from the Google Sheet."
+        },
+        "imageUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "The URL of the custom image."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the override was last updated."
+        }
+      },
+      "required": ["projectId", "imageUrl", "updatedAt"]
+    }
+    "Inquiry": {
+      "title": "Inquiry",
+      "description": "Stores user inquiries about projects.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the person making the inquiry."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The email of the person making the inquiry."
+        },
+        "projects": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "title": { "type": "string" },
+              "province": { "type": "string" },
+              "budget": { "type": "number" },
+              "organization": { "type": "string" }
+            }
+          },
+          "description": "The list of projects the user is interested in."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the inquiry was created."
+        }
+      },
+      "required": ["name", "email", "projects", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/imageOverrides/{projectId}": {
+      "schema": "ImageOverride",
+      "description": "Collection of image overrides for projects."
+    },
+    "/inquiries/{inquiryId}": {
+      "schema": "Inquiry",
+      "description": "Collection of user inquiries."
+    }
+  }
+}

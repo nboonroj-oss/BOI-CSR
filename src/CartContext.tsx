@@ -11,7 +11,14 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [cart, setCart] = useState<Project[]>([]);
+  const [cart, setCart] = useState<Project[]>(() => {
+    const saved = localStorage.getItem('boi_csr_cart');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('boi_csr_cart', JSON.stringify(cart));
+  }, [cart]);
 
   const addToCart = (project: Project) => {
     if (!cart.find(p => p.id === project.id)) {

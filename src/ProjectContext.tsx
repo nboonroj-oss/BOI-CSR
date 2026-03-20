@@ -1,11 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import Papa from 'papaparse';
+import { collection, onSnapshot, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from './firebase';
 import { Project } from './types';
 import { projects as initialProjects } from './data';
 
 interface ProjectContextType {
   projects: Project[];
-  updateProjectImage: (id: string, imageUrl: string) => void;
+  updateProjectImage: (id: string, imageUrl: string) => Promise<void>;
   isLoading: boolean;
   error: string | null;
 }
@@ -19,15 +21,23 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Local overrides for images
-  const [imageOverrides, setImageOverrides] = useState<Record<string, string>>(() => {
-    const saved = localStorage.getItem('boi_csr_image_overrides');
-    return saved ? JSON.parse(saved) : {};
-  });
+  // Firestore overrides for images
+  const [imageOverrides, setImageOverrides] = useState<Record<string, string>>({});
 
+  // Listen for image overrides from Firestore
   useEffect(() => {
-    localStorage.setItem('boi_csr_image_overrides', JSON.stringify(imageOverrides));
-  }, [imageOverrides]);
+    const unsubscribe = onSnapshot(collection(db, 'imageOverrides'), (snapshot) => {
+      const overrides: Record<string, string> = {};
+      snapshot.forEach((doc) => {
+        overrides[doc.id] = doc.data().imageUrl;
+      });
+      setImageOverrides(overrides);
+    }, (err) => {
+      console.error('Firestore Error:', err);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const fetchProjects = async () => {
     try {
@@ -122,11 +132,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     })));
   }, [imageOverrides]);
 
-  const updateProjectImage = (id: string, imageUrl: string) => {
-    setImageOverrides(prev => ({
-      ...prev,
-      [id]: imageUrl
-    }));
+  const updateProjectImage = async (id: string, imageUrl: string) => {
+    try {
+      await setDoc(doc(db, 'imageOverrides', id), {
+        projectId: id,
+        imageUrl,
+        updatedAt: serverTimestamp()
+      });
+    } catch (err) {
+      console.error('Error updating image override:', err);
+      throw err;
+    }
   };
 
   return (
