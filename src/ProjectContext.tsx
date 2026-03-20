@@ -61,6 +61,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
               const cleanedBudget = rawBudgetValue.replace(/,/g, '').replace(/[^\d.]/g, '');
               const budget = Number(cleanedBudget) || 0;
               
+              // Find OneDrive link key flexibly
+              const oneDriveKey = keys.find(k => {
+                const key = k.toLowerCase().replace(/[\s_]/g, '');
+                return key.includes('onedrive') || key.includes('เอกสารแนบ') || key.includes('ลิงก์') || key.includes('link');
+              }) || 'Link OneDrive';
+
+              let oneDriveLink = (row[oneDriveKey] || '').trim();
+              if (oneDriveLink && !oneDriveLink.startsWith('http')) {
+                oneDriveLink = `https://${oneDriveLink}`;
+              }
+
               return {
                 id,
                 status: row['สถานะโครงการ'] || '',
@@ -75,7 +86,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 sponsors: row['บริษัทผู้สนับสนุน'] || '',
                 description: row['เนื้อหาโดยย่อ'] || '',
                 grade: row['Grade'] || '',
-                oneDriveLink: row['Link OneDrive'] || '',
+                oneDriveLink,
                 image: imageOverrides[id] || 'https://images.unsplash.com/photo-1500651230702-0e2d8a49d4ad?q=80&w=2070&auto=format&fit=crop',
               };
             })
