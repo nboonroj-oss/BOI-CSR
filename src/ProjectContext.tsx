@@ -38,11 +38,29 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       Papa.parse(csvText, {
         header: true,
         skipEmptyLines: true,
-        transformHeader: (header) => header.trim(),
+        transformHeader: (header) => header.replace(/[\u200B-\u200D\uFEFF]/g, '').trim(),
         complete: (results) => {
           const parsedProjects = results.data
             .map((row: any) => {
               const id = row['ลำดับ'] || Math.random().toString(36).substr(2, 9);
+              // Find budget key flexibly with prioritized matching
+              const keys = Object.keys(row);
+              const budgetKey = keys.find(k => {
+                const key = k.toLowerCase().replace(/[\s_]/g, '');
+                return key.includes('มูลค่าโครงการก่อนvat') || key.includes('budget') || key === 'งบประมาณ';
+              }) || keys.find(k => {
+                const key = k.toLowerCase().replace(/[\s_]/g, '');
+                return key.includes('งบประมาณ') || key.includes('มูลค่าโครงการ') || key.includes('เงินทุน');
+              }) || keys.find(k => {
+                const key = k.toLowerCase();
+                return key.includes('มูลค่า') || key.includes('งบ');
+              }) || 'มูลค่าโครงการ ก่อน vat';
+              
+              const rawBudgetValue = String(row[budgetKey] || '0');
+              // Clean the value: remove commas, currency symbols, and any non-numeric characters except decimal point
+              const cleanedBudget = rawBudgetValue.replace(/,/g, '').replace(/[^\d.]/g, '');
+              const budget = Number(cleanedBudget) || 0;
+              
               return {
                 id,
                 status: row['สถานะโครงการ'] || '',
@@ -52,7 +70,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 groupType: row['ประเภทกลุ่ม'] || '',
                 businessType: row['ประเภทธุรกิจ'] || '',
                 product: row['กิจการ/ผลผลิต'] || '',
-                budget: Number(String(row['มูลค่าโครงการ ก่อน vat'] || '0').replace(/,/g, '').replace(/[^\d.]/g, '')) || 0,
+                budget,
                 partners: row['ภาคีผู้ส่งเสริม'] || '',
                 sponsors: row['บริษัทผู้สนับสนุน'] || '',
                 description: row['เนื้อหาโดยย่อ'] || '',

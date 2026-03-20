@@ -54,8 +54,8 @@ export const CatalogPage: React.FC = () => {
   };
 
   return (
-    <div className="paper-texture min-h-screen">
-      <header className="mb-12 ml-4 md:ml-12 border-l-4 border-primary pl-8">
+    <div className="paper-texture min-h-screen max-w-6xl mx-auto px-4 md:px-12 py-12">
+      <header className="mb-12 border-l-4 border-primary pl-8">
         <motion.h1 
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -69,7 +69,7 @@ export const CatalogPage: React.FC = () => {
           transition={{ delay: 0.1 }}
           className="text-3xl text-on-surface-variant max-w-2xl font-body leading-relaxed"
         >
-          แหล่งรวมโครงการที่พร้อมสำหรับการสนับสนุน เพื่อสร้างคุณภาพชีวิตที่ดีขึ้นให้แก่สังคมและผู้สูงวัย
+          รวมโครงการที่พร้อมสำหรับการสนับสนุน
         </motion.p>
       </header>
 
@@ -78,7 +78,7 @@ export const CatalogPage: React.FC = () => {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="mb-12 mx-4 md:mx-12 bg-white p-8 rounded-3xl shadow-sm border border-slate-100"
+        className="mb-12 bg-white p-8 rounded-3xl shadow-sm border border-slate-100"
       >
         <div className="flex flex-col lg:flex-row items-start lg:items-center gap-8">
           <div className="flex items-center gap-3 text-primary font-bold text-2xl shrink-0">

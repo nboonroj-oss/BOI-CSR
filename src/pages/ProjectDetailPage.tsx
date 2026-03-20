@@ -32,7 +32,7 @@ export const ProjectDetailPage: React.FC = () => {
     <motion.div 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="max-w-5xl mx-auto"
+      className="max-w-4xl mx-auto"
     >
       <div className="mb-12">
         <button 

@@ -46,7 +46,7 @@ export const AdminPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-12">
+    <div className="max-w-5xl mx-auto px-4 py-12">
       <header className="mb-12 border-b-4 border-primary pb-8">
         <h1 className="text-6xl font-headline font-extrabold text-primary tracking-tighter">Admin Dashboard</h1>
         <p className="text-2xl text-on-surface-variant mt-2 font-body">แก้ไขรูปภาพประกอบโครงการ (ห้ามเพิ่มหรือลบโครงการ)</p>
