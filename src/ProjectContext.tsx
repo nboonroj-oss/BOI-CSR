@@ -19,7 +19,7 @@ const SHEET_URL = 'https://docs.google.com/spreadsheets/d/12NCJM4W23nw9Rj1XjiSYm
 const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1500651230702-0e2d8a49d4ad?q=80&w=2070&auto=format&fit=crop';
 
 export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [projects, setProjects] = useState<Project[]>(initialProjects);
+  const [rawProjects, setRawProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,7 +32,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const overrides: Record<string, string[]> = {};
       snapshot.forEach((doc) => {
         const data = doc.data();
-        // Handle both single imageUrl (legacy) and multiple imageUrls
         if (data.imageUrls && Array.isArray(data.imageUrls)) {
           overrides[doc.id] = data.imageUrls;
         } else if (data.imageUrl) {
@@ -47,6 +46,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return () => unsubscribe();
   }, []);
 
+  // Merge raw projects with overrides
+  const projects = React.useMemo(() => {
+    return rawProjects.map(p => ({
+      ...p,
+      images: imageOverrides[p.id] || p.images
+    }));
+  }, [rawProjects, imageOverrides]);
+
   const fetchProjects = async () => {
     try {
       setIsLoading(true);
@@ -59,8 +66,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         transformHeader: (header) => header.replace(/[\u200B-\u200D\uFEFF]/g, '').trim(),
         complete: (results) => {
           const keys = results.meta.fields || [];
-          
-          // Find ID key flexibly
           const idKey = keys.find(k => {
             const key = k.trim();
             return key === 'ลำดับ' || key === 'ที่' || key === 'ID' || key === 'No' || key === 'No.';
@@ -68,11 +73,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
           const parsedProjects = results.data
             .map((row: any) => {
-              // Generate a stable ID
               const id = (row[idKey] || '').trim() || 
                          `${row['ชื่อโครงการ']}-${row['จังหวัด']}`.replace(/\s+/g, '-').substr(0, 50);
               
-              // Find budget key flexibly with prioritized matching
               const budgetKey = keys.find(k => {
                 const key = k.toLowerCase().replace(/[\s_]/g, '');
                 return key.includes('มูลค่าโครงการก่อนvat') || key.includes('budget') || key === 'งบประมาณ';
@@ -85,11 +88,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
               }) || 'มูลค่าโครงการ ก่อน vat';
               
               const rawBudgetValue = String(row[budgetKey] || '0');
-              // Clean the value: remove commas, currency symbols, and any non-numeric characters except decimal point
               const cleanedBudget = rawBudgetValue.replace(/,/g, '').replace(/[^\d.]/g, '');
               const budget = Number(cleanedBudget) || 0;
               
-              // Find OneDrive link key flexibly
               const oneDriveKey = keys.find(k => {
                 const key = k.toLowerCase().replace(/[\s_]/g, '');
                 return key.includes('onedrive') || key.includes('เอกสารแนบ') || key.includes('ลิงก์') || key.includes('link');
@@ -100,25 +101,21 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 oneDriveLink = `https://${oneDriveLink}`;
               }
 
-              // Find activity type key flexibly, prioritizing "ประเภทกิจกรรม" as per user request (Column G)
               const activityTypeKey = keys.find(k => {
                 const key = k.trim();
                 return key === 'ประเภทกิจกรรม' || key === 'ประเภทธุรกิจ' || key.toLowerCase().includes('activity');
               }) || keys[6] || 'ประเภทกิจกรรม';
 
-              // Find product key flexibly, prioritizing "กิจการ/ผลผลิต" as per user request (Column H)
               const productKey = keys.find(k => {
                 const key = k.trim();
                 return key === 'กิจการ/ผลผลิต' || key.toLowerCase().includes('product');
               }) || keys[7] || 'กิจการ/ผลผลิต';
 
-              // Find expected changes key flexibly, prioritizing "การเปลี่ยนแปลงที่คาดหวัง" (Column L)
               const expectedChangesKey = keys.find(k => {
                 const key = k.trim();
                 return key === 'การเปลี่ยนแปลงที่คาดหวัง' || key.toLowerCase().includes('expected');
               }) || keys[11] || 'การเปลี่ยนแปลงที่คาดหวัง';
 
-              // Find brief content key flexibly, prioritizing "เนื้อหาโดยย่อ" (Column N)
               const briefContentKey = keys.find(k => {
                 const key = k.trim();
                 return key === 'เนื้อหาโดยย่อ' || key.toLowerCase().includes('brief');
@@ -144,13 +141,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             })
             .filter((p: any) => p.status === 'พร้อมเสนอบริษัท');
           
-          if (parsedProjects.length > 0) {
-            // Apply current overrides immediately when setting projects
-            setProjects(parsedProjects.map(p => ({
-              ...p,
-              images: imageOverrides[p.id] || p.images
-            })));
-          }
+          setRawProjects(parsedProjects);
           setIsLoading(false);
         },
         error: (err: any) => {
@@ -169,14 +160,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     fetchProjects();
   }, []);
-
-  // Re-apply overrides when projects or overrides change
-  useEffect(() => {
-    setProjects(prev => prev.map(p => ({
-      ...p,
-      images: imageOverrides[p.id] || p.images
-    })));
-  }, [imageOverrides]);
 
   const updateProjectImages = async (id: string, imageUrls: string[]) => {
     try {
