@@ -50,11 +50,21 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         skipEmptyLines: true,
         transformHeader: (header) => header.replace(/[\u200B-\u200D\uFEFF]/g, '').trim(),
         complete: (results) => {
+          const keys = results.meta.fields || [];
+          
+          // Find ID key flexibly
+          const idKey = keys.find(k => {
+            const key = k.trim();
+            return key === 'ลำดับ' || key === 'ที่' || key === 'ID' || key === 'No' || key === 'No.';
+          }) || keys[0];
+
           const parsedProjects = results.data
             .map((row: any) => {
-              const id = row['ลำดับ'] || Math.random().toString(36).substr(2, 9);
+              // Generate a stable ID
+              const id = (row[idKey] || '').trim() || 
+                         `${row['ชื่อโครงการ']}-${row['จังหวัด']}`.replace(/\s+/g, '-').substr(0, 50);
+              
               // Find budget key flexibly with prioritized matching
-              const keys = Object.keys(row);
               const budgetKey = keys.find(k => {
                 const key = k.toLowerCase().replace(/[\s_]/g, '');
                 return key.includes('มูลค่าโครงการก่อนvat') || key.includes('budget') || key === 'งบประมาณ';
@@ -82,28 +92,56 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 oneDriveLink = `https://${oneDriveLink}`;
               }
 
+              // Find activity type key flexibly, prioritizing "ประเภทกิจกรรม" as per user request (Column G)
+              const activityTypeKey = keys.find(k => {
+                const key = k.trim();
+                return key === 'ประเภทกิจกรรม' || key === 'ประเภทธุรกิจ' || key.toLowerCase().includes('activity');
+              }) || keys[6] || 'ประเภทกิจกรรม';
+
+              // Find product key flexibly, prioritizing "กิจการ/ผลผลิต" as per user request (Column H)
+              const productKey = keys.find(k => {
+                const key = k.trim();
+                return key === 'กิจการ/ผลผลิต' || key.toLowerCase().includes('product');
+              }) || keys[7] || 'กิจการ/ผลผลิต';
+
+              // Find expected changes key flexibly, prioritizing "การเปลี่ยนแปลงที่คาดหวัง" (Column L)
+              const expectedChangesKey = keys.find(k => {
+                const key = k.trim();
+                return key === 'การเปลี่ยนแปลงที่คาดหวัง' || key.toLowerCase().includes('expected');
+              }) || keys[11] || 'การเปลี่ยนแปลงที่คาดหวัง';
+
+              // Find brief content key flexibly, prioritizing "เนื้อหาโดยย่อ" (Column N)
+              const briefContentKey = keys.find(k => {
+                const key = k.trim();
+                return key === 'เนื้อหาโดยย่อ' || key.toLowerCase().includes('brief');
+              }) || keys[13] || 'เนื้อหาโดยย่อ';
+
               return {
                 id,
-                status: row['สถานะโครงการ'] || '',
+                status: row['สถานะโครงการ'] || row['สถานะครงการ'] || '',
                 title: row['ชื่อโครงการ'] || '',
                 province: row['จังหวัด'] || '',
                 organization: row['องค์กรท้องถิ่นที่ขอรับการสนับสนุน'] || '',
                 groupType: row['ประเภทกลุ่ม'] || '',
-                businessType: row['ประเภทธุรกิจ'] || '',
-                product: row['กิจการ/ผลผลิต'] || '',
+                activityType: row[activityTypeKey] || '',
+                product: row[productKey] || '',
                 budget,
                 partners: row['ภาคีผู้ส่งเสริม'] || '',
                 sponsors: row['บริษัทผู้สนับสนุน'] || '',
-                description: row['เนื้อหาโดยย่อ'] || '',
+                expectedChanges: (row[expectedChangesKey] || row[briefContentKey] || '').trim(),
                 grade: row['Grade'] || '',
                 oneDriveLink,
-                image: imageOverrides[id] || 'https://images.unsplash.com/photo-1500651230702-0e2d8a49d4ad?q=80&w=2070&auto=format&fit=crop',
+                image: 'https://images.unsplash.com/photo-1500651230702-0e2d8a49d4ad?q=80&w=2070&auto=format&fit=crop',
               };
             })
             .filter((p: any) => p.status === 'พร้อมเสนอบริษัท');
           
           if (parsedProjects.length > 0) {
-            setProjects(parsedProjects);
+            // Apply current overrides immediately when setting projects
+            setProjects(parsedProjects.map(p => ({
+              ...p,
+              image: imageOverrides[p.id] || p.image
+            })));
           }
           setIsLoading(false);
         },

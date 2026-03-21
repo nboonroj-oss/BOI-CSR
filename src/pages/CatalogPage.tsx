@@ -3,27 +3,36 @@ import { motion } from 'motion/react';
 import { Filter, X } from 'lucide-react';
 import { useProjects } from '../ProjectContext';
 import { ProjectCard } from '../components/ProjectCard';
+import { REGIONS, getRegionByProvince } from '../utils/regions';
 
 export const CatalogPage: React.FC = () => {
   const { projects, isLoading, error } = useProjects();
+  const [selectedRegion, setSelectedRegion] = useState<string>('');
   const [selectedProvince, setSelectedProvince] = useState<string>('');
-  const [selectedBusinessType, setSelectedBusinessType] = useState<string>('');
+  const [selectedActivityType, setSelectedActivityType] = useState<string>('');
+
+  const regions = useMemo(() => {
+    return Object.keys(REGIONS);
+  }, []);
 
   const provinces = useMemo(() => {
-    return Array.from(new Set(projects.map(p => p.province))).filter(Boolean).sort();
-  }, [projects]);
+    const allProvinces = Array.from(new Set(projects.map(p => p.province))).filter(Boolean) as string[];
+    if (selectedRegion === '') return allProvinces.sort();
+    return allProvinces.filter(p => REGIONS[selectedRegion]?.includes(p)).sort();
+  }, [projects, selectedRegion]);
 
-  const businessTypes = useMemo(() => {
-    return Array.from(new Set(projects.map(p => p.businessType))).filter(Boolean).sort();
+  const activityTypes = useMemo(() => {
+    return Array.from(new Set(projects.map(p => p.activityType))).filter(Boolean).sort();
   }, [projects]);
 
   const filteredProjects = useMemo(() => {
     return projects.filter(p => {
+      const matchRegion = selectedRegion === '' || getRegionByProvince(p.province) === selectedRegion;
       const matchProvince = selectedProvince === '' || p.province === selectedProvince;
-      const matchBusinessType = selectedBusinessType === '' || p.businessType === selectedBusinessType;
-      return matchProvince && matchBusinessType;
+      const matchActivityType = selectedActivityType === '' || p.activityType === selectedActivityType;
+      return matchRegion && matchProvince && matchActivityType;
     });
-  }, [projects, selectedProvince, selectedBusinessType]);
+  }, [projects, selectedRegion, selectedProvince, selectedActivityType]);
 
   if (isLoading) {
     return (
@@ -49,8 +58,9 @@ export const CatalogPage: React.FC = () => {
   }
 
   const clearFilters = () => {
+    setSelectedRegion('');
     setSelectedProvince('');
-    setSelectedBusinessType('');
+    setSelectedActivityType('');
   };
 
   return (
@@ -61,7 +71,7 @@ export const CatalogPage: React.FC = () => {
           animate={{ opacity: 1, x: 0 }}
           className="font-headline text-6xl md:text-7xl font-extrabold text-on-surface tracking-tight mb-4"
         >
-          สารบัญโครงการนวัตกรรม
+          โครงการ BOI-CSR
         </motion.h1>
         <motion.p 
           initial={{ opacity: 0, x: -20 }}
@@ -86,7 +96,24 @@ export const CatalogPage: React.FC = () => {
             <span>ตัวกรองโครงการ:</span>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-grow w-full">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-grow w-full">
+            <div className="space-y-2">
+              <label className="text-lg font-bold text-outline uppercase tracking-wider">ภูมิภาค</label>
+              <select 
+                value={selectedRegion}
+                onChange={(e) => {
+                  setSelectedRegion(e.target.value);
+                  setSelectedProvince(''); // Reset province when region changes
+                }}
+                className="w-full h-16 px-6 text-xl bg-surface-container-low border-none rounded-2xl focus:ring-4 focus:ring-primary-fixed transition-all font-body appearance-none cursor-pointer"
+              >
+                <option value="">ทั้งหมดทุกภูมิภาค</option>
+                {regions.map(r => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+              </select>
+            </div>
+
             <div className="space-y-2">
               <label className="text-lg font-bold text-outline uppercase tracking-wider">จังหวัด</label>
               <select 
@@ -102,21 +129,21 @@ export const CatalogPage: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-lg font-bold text-outline uppercase tracking-wider">ประเภทธุรกิจ</label>
+              <label className="text-lg font-bold text-outline uppercase tracking-wider">ประเภทกิจกรรม</label>
               <select 
-                value={selectedBusinessType}
-                onChange={(e) => setSelectedBusinessType(e.target.value)}
+                value={selectedActivityType}
+                onChange={(e) => setSelectedActivityType(e.target.value)}
                 className="w-full h-16 px-6 text-xl bg-surface-container-low border-none rounded-2xl focus:ring-4 focus:ring-primary-fixed transition-all font-body appearance-none cursor-pointer"
               >
-                <option value="">ทั้งหมดทุกประเภทธุรกิจ</option>
-                {businessTypes.map(bt => (
-                  <option key={bt} value={bt}>{bt}</option>
+                <option value="">ทั้งหมดทุกประเภทกิจกรรม</option>
+                {activityTypes.map(at => (
+                  <option key={at} value={at}>{at}</option>
                 ))}
               </select>
             </div>
           </div>
 
-          {(selectedProvince || selectedBusinessType) && (
+          {(selectedRegion || selectedProvince || selectedActivityType) && (
             <button 
               onClick={clearFilters}
               className="flex items-center gap-2 text-red-500 font-bold text-xl hover:underline transition-all shrink-0"

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, Wallet, ArrowRight } from 'lucide-react';
+import { MapPin, Wallet, ArrowRight, Briefcase } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Project } from '../types';
 
@@ -36,6 +36,16 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project }) => {
             <div>
               <p className="text-lg text-slate-500 font-label leading-none">จังหวัด</p>
               <p className="text-2xl font-bold font-body leading-tight">{project.province}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-surface-container-high flex items-center justify-center shrink-0">
+              <Briefcase className="w-6 h-6 text-primary" />
+            </div>
+            <div>
+              <p className="text-lg text-slate-500 font-label leading-none">กิจการ/ผลผลิต</p>
+              <p className="text-2xl font-bold font-body leading-tight line-clamp-1">{project.product}</p>
             </div>
           </div>
           

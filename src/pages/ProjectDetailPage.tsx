@@ -1,21 +1,25 @@
 import React, { useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, CloudDownload, PlusCircle, CheckCircle, ArrowRight } from 'lucide-react';
+import { ArrowLeft, CloudDownload, PlusCircle, CheckCircle, ArrowRight, Sparkles, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useProjects } from '../ProjectContext';
 import { useCart } from '../CartContext';
+import { GoogleGenAI } from "@google/genai";
 
 export const ProjectDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { cart, addToCart } = useCart();
   const { projects } = useProjects();
+  const [aiSummary, setAiSummary] = React.useState<string | null>(null);
+  const [isSummarizing, setIsSummarizing] = React.useState(false);
   
   const project = projects.find(p => p.id === id);
 
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, []);
+    setAiSummary(null);
+  }, [id]);
 
   if (!project) {
     return (
@@ -25,6 +29,37 @@ export const ProjectDetailPage: React.FC = () => {
       </div>
     );
   }
+
+  const handleAiSummarize = async () => {
+    if (!project.expectedChanges) return;
+    
+    setIsSummarizing(true);
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: `สรุปการเปลี่ยนแปลงที่คาดหวังของโครงการนี้แบบสั้นๆ และน่าสนใจ เพื่อให้บริษัทอยากมาลงทุนในโครงการนี้:
+        
+        ชื่อโครงการ: ${project.title}
+        จังหวัด: ${project.province}
+        องค์กร: ${project.organization}
+        ประเภทกิจกรรม: ${project.activityType}
+        กิจการ/ผลผลิต: ${project.product}
+        เนื้อหา: ${project.expectedChanges}
+        
+        ให้สรุปเป็นข้อๆ หรือย่อหน้าสั้นๆ ที่เน้นผลลัพธ์ (Impact) และความคุ้มค่าของการลงทุน`,
+      });
+      
+      if (response.text) {
+        setAiSummary(response.text);
+      }
+    } catch (error) {
+      console.error("AI Summarization failed:", error);
+      alert("ไม่สามารถสรุปข้อมูลด้วย AI ได้ในขณะนี้");
+    } finally {
+      setIsSummarizing(false);
+    }
+  };
 
   const isInCart = cart.find(p => p.id === project.id);
 
@@ -76,8 +111,8 @@ export const ProjectDetailPage: React.FC = () => {
               <p className="text-3xl font-bold text-on-surface">{project.organization}</p>
             </div>
             <div className="space-y-2">
-              <label className="font-headline text-xl font-bold text-outline uppercase tracking-wider">ประเภทธุรกิจ</label>
-              <p className="text-3xl font-bold text-on-surface">{project.businessType}</p>
+              <label className="font-headline text-xl font-bold text-outline uppercase tracking-wider">ประเภทกิจกรรม</label>
+              <p className="text-3xl font-bold text-on-surface">{project.activityType}</p>
             </div>
             <div className="space-y-2">
               <label className="font-headline text-xl font-bold text-outline uppercase tracking-wider">กิจการ/ผลผลิต</label>
@@ -106,10 +141,49 @@ export const ProjectDetailPage: React.FC = () => {
           </div>
 
           <div className="space-y-6 pt-10 border-t border-surface-container-highest">
-            <h2 className="font-headline text-4xl font-bold text-on-surface">เนื้อหาโดยย่อ</h2>
-            <div className="space-y-6 text-on-surface-variant text-2xl leading-relaxed max-w-4xl whitespace-pre-line">
-              {project.description}
+            <div className="flex items-center justify-between">
+              <h2 className="font-headline text-4xl font-bold text-on-surface">การเปลี่ยนแปลงที่คาดหวัง</h2>
+              <button 
+                onClick={handleAiSummarize}
+                disabled={isSummarizing || !project.expectedChanges}
+                className="flex items-center gap-2 bg-primary/10 text-primary px-6 py-3 rounded-2xl font-bold hover:bg-primary/20 transition-all disabled:opacity-50 text-xl"
+              >
+                {isSummarizing ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Sparkles className="w-5 h-5" />
+                )}
+                สรุปด้วย AI
+              </button>
             </div>
+
+            {aiSummary ? (
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-primary/5 p-8 rounded-3xl border border-primary/20 relative"
+              >
+                <div className="absolute top-4 right-4 text-primary/30">
+                  <Sparkles className="w-8 h-8" />
+                </div>
+                <h3 className="text-2xl font-bold text-primary mb-4 flex items-center gap-2">
+                  AI Summary
+                </h3>
+                <div className="text-on-surface-variant text-2xl leading-relaxed whitespace-pre-line italic">
+                  {aiSummary}
+                </div>
+                <button 
+                  onClick={() => setAiSummary(null)}
+                  className="mt-6 text-lg text-primary hover:underline font-bold"
+                >
+                  ดูเนื้อหาเต็ม
+                </button>
+              </motion.div>
+            ) : (
+              <div className="space-y-6 text-on-surface-variant text-2xl leading-relaxed max-w-4xl whitespace-pre-line">
+                {project.expectedChanges || 'ไม่มีข้อมูลการเปลี่ยนแปลงที่คาดหวัง'}
+              </div>
+            )}
           </div>
         </div>
       </section>

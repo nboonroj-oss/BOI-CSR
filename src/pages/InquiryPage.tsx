@@ -27,31 +27,10 @@ export const InquiryPage: React.FC = () => {
           province: p.province,
           budget: p.budget,
           organization: p.organization,
+          product: p.product,
         })),
         createdAt: serverTimestamp(),
       });
-
-      // 2. Also call the email API (optional backup)
-      try {
-        await fetch('/api/send-email', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            name: formData.name,
-            email: formData.email,
-            projects: cart.map(p => ({
-              title: p.title,
-              province: p.province,
-              budget: p.budget,
-              organization: p.organization,
-            })),
-          }),
-        });
-      } catch (emailErr) {
-        console.warn('Email backup failed, but data was saved to Firestore:', emailErr);
-      }
 
       setIsSubmitted(true);
       clearCart();
@@ -74,7 +53,7 @@ export const InquiryPage: React.FC = () => {
           <ShieldCheck className="w-12 h-12" />
         </div>
         <h1 className="text-5xl font-headline font-bold text-primary mb-4">ส่งข้อมูลเรียบร้อยแล้ว</h1>
-        <p className="text-2xl text-on-surface-variant mb-12">ข้อมูลของคุณถูกส่งไปยัง nattakarn@sif.or.th เรียบร้อยแล้ว เจ้าหน้าที่ SIF จะติดต่อกลับหาคุณโดยเร็วที่สุด</p>
+        <p className="text-2xl text-on-surface-variant mb-12">ขอบคุณที่ให้ความสนใจ ข้อมูลของคุณถูกส่งไปยังระบบเรียบร้อยแล้ว เจ้าหน้าที่ SIF จะติดต่อกลับหาคุณโดยเร็วที่สุด</p>
         <Link to="/" className="bg-primary text-white px-12 py-4 rounded-2xl font-bold text-2xl">
           กลับสู่หน้าหลัก
         </Link>
@@ -85,7 +64,7 @@ export const InquiryPage: React.FC = () => {
   return (
     <div className="max-w-5xl mx-auto">
       <header className="mb-12">
-        <h1 className="text-6xl font-headline font-extrabold text-primary tracking-tighter mb-6">สรุปรายการที่สนใจ</h1>
+        <h1 className="text-6xl font-headline font-extrabold text-primary tracking-tighter mb-6">โครงการ BOI-CSR</h1>
         <p className="text-2xl text-on-surface-variant max-w-2xl leading-relaxed font-body">
           ตรวจสอบรายการโครงการที่คุณเลือกไว้ และกรอกข้อมูลด้านล่างเพื่อให้เจ้าหน้าที่ SIF ติดต่อกลับเพื่อพูดคุยและให้คำแนะนำเพิ่มเติม
         </p>
@@ -132,6 +111,8 @@ export const InquiryPage: React.FC = () => {
                         <h3 className="text-2xl font-bold font-headline mb-2 leading-tight">{project.title}</h3>
                         <div className="flex items-center gap-4 text-on-surface-variant">
                           <span className="text-xl">จังหวัด{project.province}</span>
+                          <span className="text-xl text-slate-400">|</span>
+                          <span className="text-xl">{project.product}</span>
                           <span className="text-xl font-bold text-primary">฿{project.budget.toLocaleString()}</span>
                         </div>
                       </div>

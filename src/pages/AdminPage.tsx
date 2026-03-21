@@ -16,6 +16,7 @@ export const AdminPage: React.FC = () => {
   const [savedId, setSavedId] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [loginError, setLoginError] = useState<string | null>(null);
   
   // Password gate state
   const [password, setPassword] = useState('');
@@ -63,11 +64,19 @@ export const AdminPage: React.FC = () => {
   };
 
   const handleLogin = async () => {
+    setLoginError(null);
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login failed:", error);
+      if (error.code === 'auth/unauthorized-domain') {
+        setLoginError(`Domain นี้ยังไม่ได้รับอนุญาตใน Firebase Console: ${window.location.hostname}`);
+      } else if (error.code === 'auth/popup-blocked') {
+        setLoginError('Pop-up ถูกบล็อก กรุณาอนุญาตให้เปิด Pop-up สำหรับเว็บไซต์นี้');
+      } else {
+        setLoginError(`เกิดข้อผิดพลาด: ${error.message}`);
+      }
     }
   };
 
@@ -134,6 +143,13 @@ export const AdminPage: React.FC = () => {
         <div className="bg-white p-10 rounded-3xl shadow-xl border border-slate-100">
           <h1 className="text-4xl font-headline font-bold text-primary mb-6">Security Verification</h1>
           <p className="text-xl text-on-surface-variant mb-10">เพื่อความปลอดภัยสูงสุด กรุณายืนยันตัวตนด้วย Google Account ของคุณอีกครั้ง</p>
+          
+          {loginError && (
+            <div className="bg-red-50 text-red-600 p-4 rounded-xl mb-6 font-bold text-lg border border-red-100">
+              {loginError}
+            </div>
+          )}
+
           <button 
             onClick={handleLogin}
             className="w-full flex items-center justify-center gap-3 bg-primary text-on-primary py-5 rounded-2xl font-bold text-2xl shadow-lg hover:brightness-95 transition-all active:scale-95"
@@ -264,6 +280,8 @@ export const AdminPage: React.FC = () => {
                           <h5 className="text-2xl font-bold text-primary mb-2 leading-tight">{p.title}</h5>
                           <div className="flex gap-4 text-on-surface-variant text-lg">
                             <span>{p.province}</span>
+                            <span className="text-slate-300">|</span>
+                            <span>{p.product}</span>
                             <span className="font-bold text-primary">฿{p.budget.toLocaleString()}</span>
                           </div>
                         </div>
