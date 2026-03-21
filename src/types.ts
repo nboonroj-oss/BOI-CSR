@@ -13,7 +13,7 @@ export interface Project {
   expectedChanges: string; // การเปลี่ยนแปลงที่คาดหวัง
   grade: string; // Grade
   oneDriveLink: string; // Link OneDrive
-  image: string; // Added for UI
+  images: string[]; // Added for UI, supports up to 5 images
 }
 
 export interface InquiryItem {

@@ -18,7 +18,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project }) => {
       <div className="p-8 flex flex-col h-full">
         <div className="mb-6 h-48 rounded-2xl overflow-hidden bg-surface-container-low">
           <img
-            src={project.image}
+            src={project.images[0]}
             alt={project.title}
             className="w-full h-full object-cover opacity-90 transition-transform hover:scale-105 duration-500"
             referrerPolicy="no-referrer"

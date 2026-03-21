@@ -1,7 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, CloudDownload, PlusCircle, CheckCircle, ArrowRight, Sparkles, Loader2 } from 'lucide-react';
-import { motion } from 'motion/react';
+import { ArrowLeft, CloudDownload, PlusCircle, CheckCircle, ArrowRight, Sparkles, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useProjects } from '../ProjectContext';
 import { useCart } from '../CartContext';
 import { GoogleGenAI } from "@google/genai";
@@ -13,13 +13,25 @@ export const ProjectDetailPage: React.FC = () => {
   const { projects } = useProjects();
   const [aiSummary, setAiSummary] = React.useState<string | null>(null);
   const [isSummarizing, setIsSummarizing] = React.useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   
   const project = projects.find(p => p.id === id);
 
   useEffect(() => {
     window.scrollTo(0, 0);
     setAiSummary(null);
+    setCurrentImageIndex(0);
   }, [id]);
+
+  // Slideshow effect
+  useEffect(() => {
+    if (project && project.images.length > 1) {
+      const timer = setInterval(() => {
+        setCurrentImageIndex((prev) => (prev + 1) % project.images.length);
+      }, 5000);
+      return () => clearInterval(timer);
+    }
+  }, [project]);
 
   if (!project) {
     return (
@@ -30,12 +42,25 @@ export const ProjectDetailPage: React.FC = () => {
     );
   }
 
+  const nextImage = () => {
+    setCurrentImageIndex((prev) => (prev + 1) % project.images.length);
+  };
+
+  const prevImage = () => {
+    setCurrentImageIndex((prev) => (prev - 1 + project.images.length) % project.images.length);
+  };
+
   const handleAiSummarize = async () => {
     if (!project.expectedChanges) return;
     
     setIsSummarizing(true);
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        throw new Error("Missing GEMINI_API_KEY environment variable.");
+      }
+      
+      const ai = new GoogleGenAI({ apiKey });
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: `สรุปการเปลี่ยนแปลงที่คาดหวังของโครงการนี้แบบสั้นๆ และน่าสนใจ เพื่อให้บริษัทอยากมาลงทุนในโครงการนี้:
@@ -52,10 +77,18 @@ export const ProjectDetailPage: React.FC = () => {
       
       if (response.text) {
         setAiSummary(response.text);
+      } else {
+        throw new Error("AI returned an empty response.");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("AI Summarization failed:", error);
-      alert("ไม่สามารถสรุปข้อมูลด้วย AI ได้ในขณะนี้");
+      let message = "ไม่สามารถสรุปข้อมูลด้วย AI ได้ในขณะนี้";
+      if (error.message?.includes("Missing GEMINI_API_KEY")) {
+        message = "กรุณาตั้งค่า GEMINI_API_KEY ในระบบก่อนใช้งาน";
+      } else if (error.message?.includes("quota")) {
+        message = "โควตาการใช้งาน AI เต็มแล้ว กรุณาลองใหม่ภายหลัง";
+      }
+      alert(message);
     } finally {
       setIsSummarizing(false);
     }
@@ -95,13 +128,48 @@ export const ProjectDetailPage: React.FC = () => {
       </div>
 
       <section className="bg-white rounded-3xl overflow-hidden shadow-xl mb-12">
-        <div className="aspect-[21/9] w-full bg-surface-container-highest relative">
-          <img 
-            src={project.image} 
-            alt={project.title} 
-            className="w-full h-full object-cover"
-            referrerPolicy="no-referrer"
-          />
+        <div className="aspect-[21/9] w-full bg-surface-container-highest relative group">
+          <AnimatePresence mode="wait">
+            <motion.img 
+              key={currentImageIndex}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.5 }}
+              src={project.images[currentImageIndex]} 
+              alt={`${project.title} - ${currentImageIndex + 1}`} 
+              className="w-full h-full object-cover"
+              referrerPolicy="no-referrer"
+            />
+          </AnimatePresence>
+
+          {project.images.length > 1 && (
+            <>
+              <button 
+                onClick={(e) => { e.preventDefault(); prevImage(); }}
+                className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-black/20 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/40 transition-all opacity-0 group-hover:opacity-100"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+              <button 
+                onClick={(e) => { e.preventDefault(); nextImage(); }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-black/20 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/40 transition-all opacity-0 group-hover:opacity-100"
+              >
+                <ChevronRight className="w-6 h-6" />
+              </button>
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                {project.images.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setCurrentImageIndex(idx)}
+                    className={`w-2 h-2 rounded-full transition-all ${
+                      idx === currentImageIndex ? 'bg-white w-6' : 'bg-white/50'
+                    }`}
+                  />
+                ))}
+              </div>
+            </>
+          )}
         </div>
         
         <div className="p-8 md:p-12 space-y-12">

@@ -7,7 +7,7 @@ import { projects as initialProjects } from './data';
 
 interface ProjectContextType {
   projects: Project[];
-  updateProjectImage: (id: string, imageUrl: string) => Promise<void>;
+  updateProjectImages: (id: string, imageUrls: string[]) => Promise<void>;
   isLoading: boolean;
   error: string | null;
 }
@@ -16,20 +16,28 @@ const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
 const SHEET_URL = 'https://docs.google.com/spreadsheets/d/12NCJM4W23nw9Rj1XjiSYmqHb8JaK5EdKUl0qkIJZ6zM/export?format=csv&gid=0';
 
+const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1500651230702-0e2d8a49d4ad?q=80&w=2070&auto=format&fit=crop';
+
 export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [projects, setProjects] = useState<Project[]>(initialProjects);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Firestore overrides for images
-  const [imageOverrides, setImageOverrides] = useState<Record<string, string>>({});
+  const [imageOverrides, setImageOverrides] = useState<Record<string, string[]>>({});
 
   // Listen for image overrides from Firestore
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'imageOverrides'), (snapshot) => {
-      const overrides: Record<string, string> = {};
+      const overrides: Record<string, string[]> = {};
       snapshot.forEach((doc) => {
-        overrides[doc.id] = doc.data().imageUrl;
+        const data = doc.data();
+        // Handle both single imageUrl (legacy) and multiple imageUrls
+        if (data.imageUrls && Array.isArray(data.imageUrls)) {
+          overrides[doc.id] = data.imageUrls;
+        } else if (data.imageUrl) {
+          overrides[doc.id] = [data.imageUrl];
+        }
       });
       setImageOverrides(overrides);
     }, (err) => {
@@ -131,7 +139,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 expectedChanges: (row[expectedChangesKey] || row[briefContentKey] || '').trim(),
                 grade: row['Grade'] || '',
                 oneDriveLink,
-                image: 'https://images.unsplash.com/photo-1500651230702-0e2d8a49d4ad?q=80&w=2070&auto=format&fit=crop',
+                images: [DEFAULT_IMAGE],
               };
             })
             .filter((p: any) => p.status === 'พร้อมเสนอบริษัท');
@@ -140,7 +148,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             // Apply current overrides immediately when setting projects
             setProjects(parsedProjects.map(p => ({
               ...p,
-              image: imageOverrides[p.id] || p.image
+              images: imageOverrides[p.id] || p.images
             })));
           }
           setIsLoading(false);
@@ -166,15 +174,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     setProjects(prev => prev.map(p => ({
       ...p,
-      image: imageOverrides[p.id] || p.image
+      images: imageOverrides[p.id] || p.images
     })));
   }, [imageOverrides]);
 
-  const updateProjectImage = async (id: string, imageUrl: string) => {
+  const updateProjectImages = async (id: string, imageUrls: string[]) => {
     try {
       await setDoc(doc(db, 'imageOverrides', id), {
         projectId: id,
-        imageUrl,
+        imageUrls,
         updatedAt: serverTimestamp()
       });
     } catch (err) {
@@ -184,7 +192,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   return (
-    <ProjectContext.Provider value={{ projects, updateProjectImage, isLoading, error }}>
+    <ProjectContext.Provider value={{ projects, updateProjectImages, isLoading, error }}>
       {children}
     </ProjectContext.Provider>
   );

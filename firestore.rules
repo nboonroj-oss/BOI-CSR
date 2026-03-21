@@ -8,7 +8,7 @@ service cloud.firestore {
     // Document ID: projectId
     // Fields:
     //   - projectId: string (required)
-    //   - imageUrl: string (required, URL format)
+    //   - imageUrls: list (required, list of strings)
     //   - updatedAt: timestamp (required)
     // ===============================================================
 
@@ -25,11 +25,12 @@ service cloud.firestore {
     }
 
     function isValidImageOverride(data) {
-      return data.keys().hasAll(['projectId', 'imageUrl', 'updatedAt']) &&
-             data.keys().hasOnly(['projectId', 'imageUrl', 'updatedAt']) &&
+      return data.keys().hasAll(['projectId', 'imageUrls', 'updatedAt']) &&
+             data.keys().hasOnly(['projectId', 'imageUrls', 'updatedAt']) &&
              data.projectId is string &&
-             data.imageUrl is string &&
-             data.imageUrl.matches("^https?://.*") &&
+             data.imageUrls is list &&
+             data.imageUrls.size() > 0 &&
+             data.imageUrls.size() <= 5 &&
              data.updatedAt is timestamp;
     }
 

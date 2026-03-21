@@ -10,9 +10,9 @@ const ADMIN_EMAIL = "n.boonroj@gmail.com";
 const ADMIN_PASSWORD = "BOI2569";
 
 export const AdminPage: React.FC = () => {
-  const { projects, updateProjectImage, isLoading, error } = useProjects();
+  const { projects, updateProjectImages, isLoading, error } = useProjects();
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [tempUrl, setTempUrl] = useState('');
+  const [tempUrls, setTempUrls] = useState<string[]>(['', '', '', '', '']);
   const [savedId, setSavedId] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -180,21 +180,36 @@ export const AdminPage: React.FC = () => {
     );
   }
 
-  const handleStartEdit = (id: string, currentUrl: string) => {
+  const handleStartEdit = (id: string, currentUrls: string[]) => {
     setEditingId(id);
-    setTempUrl(currentUrl);
+    // Ensure we always have 5 slots
+    const urls = [...currentUrls];
+    while (urls.length < 5) urls.push('');
+    setTempUrls(urls.slice(0, 5));
     setSavedId(null);
   };
 
   const handleSave = async (id: string) => {
     try {
-      await updateProjectImage(id, tempUrl);
+      // Filter out empty URLs
+      const filteredUrls = tempUrls.filter(url => url.trim() !== '');
+      if (filteredUrls.length === 0) {
+        alert("กรุณาใส่รูปภาพอย่างน้อย 1 รูป");
+        return;
+      }
+      await updateProjectImages(id, filteredUrls);
       setEditingId(null);
       setSavedId(id);
       setTimeout(() => setSavedId(null), 2000);
     } catch (err) {
       alert("ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง");
     }
+  };
+
+  const handleUrlChange = (index: number, value: string) => {
+    const newUrls = [...tempUrls];
+    newUrls[index] = value;
+    setTempUrls(newUrls);
   };
 
   return (
@@ -308,10 +323,10 @@ export const AdminPage: React.FC = () => {
                 key={project.id}
                 className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 flex flex-col md:flex-row items-start md:items-center justify-between gap-8 group hover:shadow-md transition-all"
               >
-                <div className="flex items-center gap-8 flex-grow">
+                <div className="flex items-center gap-8 flex-grow w-full">
                   <div className="w-32 h-32 rounded-2xl overflow-hidden bg-slate-100 flex-shrink-0 shadow-inner">
                     <img 
-                      src={editingId === project.id ? tempUrl : project.image} 
+                      src={editingId === project.id ? (tempUrls.find(u => u !== '') || project.images[0]) : project.images[0]} 
                       alt={project.title} 
                       className="w-full h-full object-cover" 
                       referrerPolicy="no-referrer" 
@@ -328,22 +343,28 @@ export const AdminPage: React.FC = () => {
                     </div>
                     
                     {editingId === project.id ? (
-                      <div className="mt-6 flex flex-col gap-2">
-                        <label className="text-lg font-bold text-primary">URL รูปภาพใหม่:</label>
+                      <div className="mt-6 flex flex-col gap-4">
+                        <div className="space-y-3">
+                          <label className="text-lg font-bold text-primary">URL รูปภาพ (สูงสุด 5 รูป):</label>
+                          {tempUrls.map((url, index) => (
+                            <div key={index} className="flex gap-3 items-center">
+                              <span className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold shrink-0">{index + 1}</span>
+                              <input
+                                className="flex-grow h-12 px-4 text-lg bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-primary outline-none transition-all"
+                                value={url}
+                                onChange={(e) => handleUrlChange(index, e.target.value)}
+                                placeholder={`วางลิงก์รูปภาพที่ ${index + 1} ที่นี่...`}
+                              />
+                            </div>
+                          ))}
+                        </div>
                         <div className="flex gap-3">
-                          <input
-                            className="flex-grow h-14 px-6 text-xl bg-slate-50 border-2 border-primary rounded-xl focus:ring-0 outline-none transition-all"
-                            value={tempUrl}
-                            onChange={(e) => setTempUrl(e.target.value)}
-                            placeholder="วางลิงก์รูปภาพที่นี่..."
-                            autoFocus
-                          />
                           <button
                             onClick={() => handleSave(project.id)}
-                            className="bg-primary text-on-primary px-8 rounded-xl font-bold text-xl flex items-center gap-2 shadow-md hover:brightness-90 transition-all"
+                            className="bg-primary text-on-primary px-8 py-3 rounded-xl font-bold text-xl flex items-center gap-2 shadow-md hover:brightness-90 transition-all"
                           >
                             <Save className="w-5 h-5" />
-                            บันทึก
+                            บันทึกทั้งหมด
                           </button>
                           <button
                             onClick={() => setEditingId(null)}
@@ -356,11 +377,11 @@ export const AdminPage: React.FC = () => {
                     ) : (
                       <div className="mt-4 flex items-center gap-4">
                         <button
-                          onClick={() => handleStartEdit(project.id, project.image)}
+                          onClick={() => handleStartEdit(project.id, project.images)}
                           className="text-primary font-bold text-xl flex items-center gap-2 hover:underline"
                         >
                           <ImageIcon className="w-5 h-5" />
-                          เปลี่ยนรูปภาพ
+                          จัดการรูปภาพ ({project.images.length})
                         </button>
                         {savedId === project.id && (
                           <motion.span 

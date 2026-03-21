@@ -9,10 +9,10 @@
           "type": "string",
           "description": "The unique ID of the project from the Google Sheet."
         },
-        "imageUrl": {
-          "type": "string",
-          "format": "uri",
-          "description": "The URL of the custom image."
+        "imageUrls": {
+          "type": "array",
+          "items": { "type": "string", "format": "uri" },
+          "description": "The URLs of the custom images (up to 5)."
         },
         "updatedAt": {
           "type": "string",
@@ -20,7 +20,7 @@
           "description": "The timestamp when the override was last updated."
         }
       },
-      "required": ["projectId", "imageUrl", "updatedAt"]
+      "required": ["projectId", "imageUrls", "updatedAt"]
     },
     "Inquiry": {
       "title": "Inquiry",
