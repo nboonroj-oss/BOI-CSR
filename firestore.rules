@@ -36,9 +36,9 @@ service cloud.firestore {
     function isValidInquiry(data) {
       return data.keys().hasAll(['name', 'email', 'projects', 'createdAt']) &&
              data.keys().hasOnly(['name', 'email', 'projects', 'createdAt']) &&
-             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
-             data.email is string && data.email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$") &&
-             data.projects is list && data.projects.size() > 0 && data.projects.size() <= 20 &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 200 &&
+             data.email is string && data.email.matches("^[^@]+@[^@]+\\.[^@]+$") &&
+             data.projects is list && data.projects.size() > 0 && data.projects.size() <= 100 &&
              data.createdAt is timestamp;
     }
 

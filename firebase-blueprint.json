@@ -21,7 +21,7 @@
         }
       },
       "required": ["projectId", "imageUrl", "updatedAt"]
-    }
+    },
     "Inquiry": {
       "title": "Inquiry",
       "description": "Stores user inquiries about projects.",
@@ -44,7 +44,8 @@
               "title": { "type": "string" },
               "province": { "type": "string" },
               "budget": { "type": "number" },
-              "organization": { "type": "string" }
+              "organization": { "type": "string" },
+              "product": { "type": "string" }
             }
           },
           "description": "The list of projects the user is interested in."

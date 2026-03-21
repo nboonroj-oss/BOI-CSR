@@ -3,7 +3,7 @@ import { Trash2, Send, ShieldCheck, PlusCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db, handleFirestoreError, OperationType } from '../firebase';
 import { useCart } from '../CartContext';
 
 export const InquiryPage: React.FC = () => {
@@ -11,15 +11,18 @@ export const InquiryPage: React.FC = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [formData, setFormData] = useState({ name: '', email: '' });
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (cart.length === 0) return;
     
     setIsSending(true);
+    setErrorMessage(null);
+    const path = 'inquiries';
     try {
       // 1. Save to Firestore
-      await addDoc(collection(db, 'inquiries'), {
+      await addDoc(collection(db, path), {
         name: formData.name,
         email: formData.email,
         projects: cart.map(p => ({
@@ -36,7 +39,16 @@ export const InquiryPage: React.FC = () => {
       clearCart();
     } catch (error) {
       console.error('Error saving inquiry:', error);
-      alert('เกิดข้อผิดพลาดในการส่งข้อมูล กรุณาลองใหม่อีกครั้ง');
+      try {
+        handleFirestoreError(error, OperationType.WRITE, path);
+      } catch (enhancedError: any) {
+        const errorDetails = JSON.parse(enhancedError.message);
+        if (errorDetails.error.includes('permission-denied')) {
+          setErrorMessage('คุณไม่มีสิทธิ์ในการส่งข้อมูล หรือข้อมูลไม่ถูกต้องตามที่ระบบกำหนด (Security Rules Violation)');
+        } else {
+          setErrorMessage('เกิดข้อผิดพลาดในการส่งข้อมูล: ' + errorDetails.error);
+        }
+      }
     } finally {
       setIsSending(false);
     }
@@ -176,6 +188,12 @@ export const InquiryPage: React.FC = () => {
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 />
               </div>
+
+              {errorMessage && (
+                <div className="p-4 bg-red-50 border border-red-200 text-red-600 rounded-2xl text-lg font-medium animate-shake">
+                  {errorMessage}
+                </div>
+              )}
 
               <div className="pt-6">
                 <button
