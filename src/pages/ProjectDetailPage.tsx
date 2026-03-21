@@ -54,25 +54,25 @@ export const ProjectDetailPage: React.FC = () => {
     if (!project.expectedChanges) return;
     
     setIsSummarizing(true);
+    setAiSummary(null);
     try {
       const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error("Missing GEMINI_API_KEY environment variable.");
-      }
       
-      const ai = new GoogleGenAI({ apiKey });
+      // If no API key is found, we'll try to proceed but catch the specific error
+      // This allows the platform's auto-injected key to work if available
+      const ai = new GoogleGenAI({ apiKey: apiKey || "" });
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
-        contents: `สรุปการเปลี่ยนแปลงที่คาดหวังของโครงการนี้แบบสั้นๆ และน่าสนใจ เพื่อให้บริษัทอยากมาลงทุนในโครงการนี้:
+        contents: `คุณเป็นผู้เชี่ยวชาญด้าน CSR และการพัฒนาชุมชน 
+        กรุณาสรุป "การเปลี่ยนแปลงที่คาดหวัง" ของโครงการนี้ให้กระชับ น่าสนใจ และดึงดูดใจบริษัทที่ต้องการสนับสนุนโครงการเพื่อสังคม
         
+        ข้อมูลโครงการ:
         ชื่อโครงการ: ${project.title}
         จังหวัด: ${project.province}
-        องค์กร: ${project.organization}
-        ประเภทกิจกรรม: ${project.activityType}
         กิจการ/ผลผลิต: ${project.product}
-        เนื้อหา: ${project.expectedChanges}
+        รายละเอียดเดิม: ${project.expectedChanges}
         
-        ให้สรุปเป็นข้อๆ หรือย่อหน้าสั้นๆ ที่เน้นผลลัพธ์ (Impact) และความคุ้มค่าของการลงทุน`,
+        ให้สรุปเป็นข้อๆ (Bullet points) ประมาณ 3-4 ข้อ โดยเน้นที่ผลกระทบ (Impact) ที่จะเกิดขึ้นจริง`,
       });
       
       if (response.text) {
@@ -82,12 +82,21 @@ export const ProjectDetailPage: React.FC = () => {
       }
     } catch (error: any) {
       console.error("AI Summarization failed:", error);
-      let message = "ไม่สามารถสรุปข้อมูลด้วย AI ได้ในขณะนี้";
-      if (error.message?.includes("Missing GEMINI_API_KEY")) {
-        message = "กรุณาตั้งค่า GEMINI_API_KEY ในระบบก่อนใช้งาน";
-      } else if (error.message?.includes("quota")) {
-        message = "โควตาการใช้งาน AI เต็มแล้ว กรุณาลองใหม่ภายหลัง";
+      
+      const isVercel = window.location.hostname.includes('vercel.app');
+      let message = "ไม่สามารถสรุปข้อมูลได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง";
+      
+      // Check for missing key or auth errors
+      if (!process.env.GEMINI_API_KEY || error.message?.includes("API key") || error.message?.includes("403") || error.message?.includes("401")) {
+        if (isVercel) {
+          message = "แอปบน Vercel จำเป็นต้องตั้งค่า GEMINI_API_KEY ในหน้า Environment Variables ของ Vercel ก่อนครับ";
+        } else {
+          message = "ระบบยังไม่ได้เชื่อมต่อกับ AI (GEMINI_API_KEY) กรุณาตรวจสอบการตั้งค่าในหน้า Settings ของแอปครับ";
+        }
+      } else if (error.message?.includes("quota") || error.message?.includes("429")) {
+        message = "ขออภัย โควตาการใช้งาน AI ฟรีเต็มแล้วในขณะนี้ กรุณาลองใหม่ภายหลัง";
       }
+      
       alert(message);
     } finally {
       setIsSummarizing(false);
