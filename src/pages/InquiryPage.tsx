@@ -161,13 +161,13 @@ export const InquiryPage: React.FC = () => {
             <form onSubmit={handleSubmit} className="space-y-8">
               <div className="space-y-3">
                 <label className="block text-xl font-bold text-on-surface" htmlFor="full-name">
-                  ชื่อ-นามสกุล
+                  ชื่อบริษัท
                 </label>
                 <input
                   required
                   className="w-full h-20 px-6 text-xl bg-white border-none rounded-2xl shadow-inner focus:ring-4 focus:ring-primary-fixed transition-all font-body"
                   id="full-name"
-                  placeholder="เช่น คุณสมศักดิ์ รักดี"
+                  placeholder="เช่น บริษัท เอบีซี จำกัด"
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
