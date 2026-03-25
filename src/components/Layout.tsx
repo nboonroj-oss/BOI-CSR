@@ -10,7 +10,6 @@ export const Header: React.FC = () => {
   const navItems = [
     { label: 'Catalog', path: '/' },
     { label: 'My Inquiries', path: '/inquiry' },
-    { label: 'About SIF', path: '#' },
   ];
 
   return (

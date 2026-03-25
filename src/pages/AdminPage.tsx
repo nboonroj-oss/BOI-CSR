@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Save, Image as ImageIcon, MapPin, Wallet, Check, LogIn, LogOut, Mail, Calendar, User as UserIcon, Lock } from 'lucide-react';
+import { Save, Image as ImageIcon, MapPin, Wallet, Check, LogIn, LogOut, Mail, Calendar, User as UserIcon, Lock, Trash2 } from 'lucide-react';
 import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, User } from 'firebase/auth';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { useProjects } from '../ProjectContext';
 
-const ADMIN_EMAIL = "n.boonroj@gmail.com";
+const ADMIN_EMAILS = ["n.boonroj@gmail.com", "cindyjung.7831@gmail.com"];
 const ADMIN_PASSWORD = "BOI2569";
 
 export const AdminPage: React.FC = () => {
@@ -39,7 +39,7 @@ export const AdminPage: React.FC = () => {
 
   // Listen for inquiries
   useEffect(() => {
-    if (user && user.email === ADMIN_EMAIL) {
+    if (user && user.email && ADMIN_EMAILS.includes(user.email)) {
       const q = query(collection(db, 'inquiries'), orderBy('createdAt', 'desc'));
       const unsubscribe = onSnapshot(q, (snapshot) => {
         const docs = snapshot.docs.map(doc => ({
@@ -162,7 +162,7 @@ export const AdminPage: React.FC = () => {
     );
   }
 
-  if (user.email !== ADMIN_EMAIL) {
+  if (!user.email || !ADMIN_EMAILS.includes(user.email)) {
     return (
       <div className="max-w-md mx-auto px-4 py-20 text-center">
         <div className="bg-white p-10 rounded-3xl shadow-xl border border-slate-100">
@@ -210,6 +210,16 @@ export const AdminPage: React.FC = () => {
     const newUrls = [...tempUrls];
     newUrls[index] = value;
     setTempUrls(newUrls);
+  };
+
+  const handleDeleteInquiry = async (id: string) => {
+    if (window.confirm('คุณแน่ใจหรือไม่ว่าต้องการลบคำขอนี้?')) {
+      try {
+        await deleteDoc(doc(db, 'inquiries', id));
+      } catch (err) {
+        alert('ไม่สามารถลบข้อมูลได้ กรุณาลองใหม่อีกครั้ง');
+      }
+    }
   };
 
   return (
@@ -285,6 +295,13 @@ export const AdminPage: React.FC = () => {
                         })}
                       </span>
                     </div>
+                    <button
+                      onClick={() => handleDeleteInquiry(inquiry.id)}
+                      className="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all self-start"
+                      title="ลบคำขอ"
+                    >
+                      <Trash2 className="w-6 h-6" />
+                    </button>
                   </div>
 
                   <div className="space-y-6">
