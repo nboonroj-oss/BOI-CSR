@@ -13,6 +13,7 @@ export interface Project {
   expectedChanges: string; // การเปลี่ยนแปลงที่คาดหวัง
   grade: string; // Grade
   oneDriveLink: string; // Link OneDrive
+  mou: string; // ตลาดและช่องทางจำหน่าย (MOU)
   images: string[]; // Added for UI, supports up to 5 images
 }
 

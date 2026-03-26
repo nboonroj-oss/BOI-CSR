@@ -1,17 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, CloudDownload, PlusCircle, CheckCircle, ArrowRight, Sparkles, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, CloudDownload, PlusCircle, CheckCircle, ArrowRight, Sparkles, Loader2, ChevronLeft, ChevronRight, AlertCircle, TrendingUp, Package, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useProjects } from '../ProjectContext';
 import { useCart } from '../CartContext';
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
+
+interface AiSummaryData {
+  introduction: string;
+  painPoints: string[];
+  socialImpact: string[];
+  supportItems: string[];
+  mou: string;
+  reasonToSupport: string;
+}
 
 export const ProjectDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { cart, addToCart } = useCart();
   const { projects } = useProjects();
-  const [aiSummary, setAiSummary] = React.useState<string | null>(null);
+  const [aiSummary, setAiSummary] = React.useState<AiSummaryData | null>(null);
   const [isSummarizing, setIsSummarizing] = React.useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   
@@ -63,29 +72,60 @@ export const ProjectDetailPage: React.FC = () => {
         model: "gemini-3-flash-preview",
         contents: `คุณเป็นผู้เชี่ยวชาญด้าน CSR และการพัฒนาชุมชน 
         กรุณาสรุปข้อมูลโครงการโดยใช้ข้อมูลจาก "ความคาดหวังของโครงการ" และข้อมูลจากลิงก์ OneDrive (ถ้ามี) 
-        ให้สรุปด้วยเนื้อหาที่ smooth และต่อเนื่อง อ่านง่าย กระชับ ได้ใจความ ตามหัวข้อดังนี้:
-        
-        1. แนะนำกลุ่มวิสาหกิจชุมชนสั้นๆ (ไม่เกิน 3 บรรทัด)
-        2. กิจกรรมที่ทำในโครงการนี้
-        3. ปัญหาและความต้องการของชุมชน
-        4. ผลลัพธ์และความคาดหวังในการเปลี่ยนแปลงหลังจากโครงการนี้ประสบความสำเร็จ
-        5. เหตุผลที่บริษัทควรสนับสนุนโครงการนี้
+        ให้สรุปด้วยเนื้อหาที่ smooth และต่อเนื่อง อ่านง่าย กระชับ ได้ใจความ ตามรูปแบบ JSON ที่กำหนด
         
         ข้อมูลโครงการ:
         ชื่อโครงการ: ${project.title}
+        องค์กร: ${project.organization}
         จังหวัด: ${project.province}
         กิจการ/ผลผลิต: ${project.product}
+        ตลาดและช่องทางจำหน่าย (MOU): ${project.mou || 'ไม่มี'}
         ความคาดหวังของโครงการ (เดิม): ${project.expectedChanges}
         ลิงก์ข้อมูลเพิ่มเติม (OneDrive): ${project.oneDriveLink || 'ไม่มี'}
         
         เน้นการเขียนที่ดึงดูดใจบริษัทที่ต้องการสนับสนุนโครงการเพื่อสังคม (CSR)`,
         config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              introduction: {
+                type: Type.STRING,
+                description: "แนะนำกลุ่มวิสาหกิจชุมชนสั้นๆ (ไม่เกิน 3 บรรทัด) ให้ดูน่าเชื่อถือและมีศักยภาพ"
+              },
+              painPoints: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+                description: "ปัญหาและความต้องการของชุมชน (Pain Points) สรุปเป็นข้อๆ"
+              },
+              socialImpact: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+                description: "ผลลัพธ์และความคาดหวังในการเปลี่ยนแปลง (Social Impact) สรุปเป็นข้อๆ"
+              },
+              supportItems: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+                description: "รายการที่ขอรับการสนับสนุน (เช่น เครื่องจักร, โรงเรือน, อุปกรณ์ต่างๆ)"
+              },
+              mou: {
+                type: Type.STRING,
+                description: "สรุปข้อมูลตลาดและช่องทางจำหน่าย (MOU) ให้ดูมีความมั่นคงและยั่งยืน"
+              },
+              reasonToSupport: {
+                type: Type.STRING,
+                description: "เหตุผลสั้นๆ ที่บริษัทควรสนับสนุนโครงการนี้เพื่อสร้างความยั่งยืน"
+              }
+            },
+            required: ["introduction", "painPoints", "socialImpact", "supportItems", "mou", "reasonToSupport"]
+          },
           tools: project.oneDriveLink ? [{ urlContext: {} }] : []
         }
       });
       
       if (response.text) {
-        setAiSummary(response.text);
+        const data = JSON.parse(response.text);
+        setAiSummary(data);
       } else {
         throw new Error("AI returned an empty response.");
       }
@@ -205,6 +245,10 @@ export const ProjectDetailPage: React.FC = () => {
               <p className="text-3xl font-bold text-on-surface">{project.product}</p>
             </div>
             <div className="space-y-2">
+              <label className="font-headline text-xl font-bold text-outline uppercase tracking-wider">ตลาดและช่องทางจำหน่าย (MOU)</label>
+              <p className="text-3xl font-bold text-on-surface">{project.mou || '-'}</p>
+            </div>
+            <div className="space-y-2">
               <label className="font-headline text-xl font-bold text-outline uppercase tracking-wider">มูลค่าโครงการก่อน VAT</label>
               <p className="text-5xl font-bold text-primary">฿{project.budget.toLocaleString()}</p>
             </div>
@@ -247,23 +291,120 @@ export const ProjectDetailPage: React.FC = () => {
               <motion.div 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-primary/5 p-8 rounded-3xl border border-primary/20 relative"
+                className="bg-white p-10 rounded-[3rem] border-2 border-primary/10 shadow-2xl relative overflow-hidden"
               >
-                <div className="absolute top-4 right-4 text-primary/30">
-                  <Sparkles className="w-8 h-8" />
+                {/* Background Decoration */}
+                <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/5 rounded-full blur-3xl" />
+                <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-secondary/5 rounded-full blur-3xl" />
+
+                <div className="relative space-y-10">
+                  {/* Header */}
+                  <div className="text-center space-y-4">
+                    <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-1 rounded-full font-bold text-sm uppercase tracking-widest">
+                      <Sparkles className="w-4 h-4" />
+                      AI Generated Infographic
+                    </div>
+                    <h3 className="text-4xl font-bold text-on-surface leading-tight">
+                      "{project.title}"
+                    </h3>
+                    <p className="text-xl text-primary font-bold italic">
+                      {project.organization}
+                    </p>
+                  </div>
+
+                  {/* Introduction */}
+                  <div className="bg-surface-container-low p-6 rounded-2xl border-l-4 border-primary space-y-4">
+                    <p className="text-2xl text-on-surface-variant leading-relaxed">
+                      {aiSummary.introduction}
+                    </p>
+                    {aiSummary.mou && (
+                      <div className="flex items-center gap-2 text-primary font-bold text-xl">
+                        <TrendingUp className="w-5 h-5" />
+                        <span>ช่องทางจำหน่าย (MOU): {aiSummary.mou}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Main Grid: Pain Points & Social Impact */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {/* Pain Points */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3 text-orange-600">
+                        <div className="p-2 bg-orange-100 rounded-lg">
+                          <AlertCircle className="w-6 h-6" />
+                        </div>
+                        <h4 className="text-2xl font-bold uppercase tracking-wide">Pain Points</h4>
+                      </div>
+                      <ul className="space-y-3">
+                        {aiSummary.painPoints.map((point, idx) => (
+                          <li key={idx} className="flex gap-3 text-xl text-on-surface-variant">
+                            <span className="text-orange-400 mt-1.5">•</span>
+                            <span>{point}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {/* Social Impact */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3 text-green-600">
+                        <div className="p-2 bg-green-100 rounded-lg">
+                          <TrendingUp className="w-6 h-6" />
+                        </div>
+                        <h4 className="text-2xl font-bold uppercase tracking-wide">ผลลัพธ์ทางสังคม</h4>
+                      </div>
+                      <ul className="space-y-3">
+                        {aiSummary.socialImpact.map((impact, idx) => (
+                          <li key={idx} className="flex gap-3 text-xl text-on-surface-variant">
+                            <span className="text-green-400 mt-1.5">•</span>
+                            <span>{impact}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+
+                  {/* Bottom Section: Support Items & Budget */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-8 border-t border-surface-container-highest">
+                    {/* Support Items */}
+                    <div className="bg-yellow-50 p-6 rounded-2xl border border-yellow-100 space-y-4">
+                      <div className="flex items-center gap-3 text-yellow-700">
+                        <Package className="w-6 h-6" />
+                        <h4 className="text-2xl font-bold">รายการที่ขอรับการสนับสนุน</h4>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {aiSummary.supportItems.map((item, idx) => (
+                          <span key={idx} className="bg-white px-3 py-1 rounded-lg text-lg text-yellow-800 border border-yellow-200 shadow-sm">
+                            {item}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Budget & Reason */}
+                    <div className="space-y-6 flex flex-col justify-center">
+                      <div className="text-right">
+                        <p className="text-lg text-outline font-bold uppercase tracking-widest">งบประมาณที่ขอรับการสนับสนุน</p>
+                        <p className="text-5xl font-bold text-primary">฿{project.budget.toLocaleString()}</p>
+                        <p className="text-sm text-outline">(มูลค่าก่อน VAT)</p>
+                      </div>
+                      <div className="flex items-start gap-3 bg-primary/5 p-4 rounded-xl italic text-primary">
+                        <Info className="w-5 h-5 mt-1 flex-shrink-0" />
+                        <p className="text-lg leading-snug">{aiSummary.reasonToSupport}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-center pt-4">
+                    <button 
+                      onClick={() => setAiSummary(null)}
+                      className="text-lg text-outline hover:text-primary transition-colors flex items-center gap-2"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                      กลับไปดูรายละเอียดเดิม
+                    </button>
+                  </div>
                 </div>
-                <h3 className="text-2xl font-bold text-primary mb-4 flex items-center gap-2">
-                  AI Summary
-                </h3>
-                <div className="text-on-surface-variant text-2xl leading-relaxed whitespace-pre-line italic">
-                  {aiSummary}
-                </div>
-                <button 
-                  onClick={() => setAiSummary(null)}
-                  className="mt-6 text-lg text-primary hover:underline font-bold"
-                >
-                  ดูเนื้อหาเต็ม
-                </button>
               </motion.div>
             ) : (
               <div className="space-y-6 text-on-surface-variant text-2xl leading-relaxed max-w-4xl whitespace-pre-line">

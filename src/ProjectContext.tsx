@@ -116,6 +116,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 return key === 'การเปลี่ยนแปลง/ความคาดหวังของโครงการ' || key === 'การเปลี่ยนแปลงที่คาดหวัง' || key.toLowerCase().includes('expected');
               }) || keys[12] || 'การเปลี่ยนแปลง/ความคาดหวังของโครงการ';
 
+              const mouKey = keys.find(k => {
+                const key = k.trim();
+                return key === 'ตลาดและช่องทางจำหน่าย (MOU)' || key.includes('MOU') || key.includes('ตลาด');
+              }) || keys[14] || 'ตลาดและช่องทางจำหน่าย (MOU)';
+
               const briefContentKey = keys.find(k => {
                 const key = k.trim();
                 return key === 'เนื้อหาโดยย่อ' || key.toLowerCase().includes('brief');
@@ -136,6 +141,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 expectedChanges: (row[expectedChangesKey] || row[briefContentKey] || '').trim(),
                 grade: row['Grade'] || '',
                 oneDriveLink,
+                mou: row[mouKey] || '',
                 images: [DEFAULT_IMAGE],
               };
             })
