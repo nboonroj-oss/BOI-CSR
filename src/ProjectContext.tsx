@@ -94,7 +94,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
               const oneDriveKey = keys.find(k => {
                 const key = k.toLowerCase().replace(/[\s_]/g, '');
                 return key.includes('onedrive') || key.includes('เอกสารแนบ') || key.includes('ลิงก์') || key.includes('link');
-              }) || 'Link OneDrive';
+              }) || keys[13] || 'Link OneDrive';
 
               let oneDriveLink = (row[oneDriveKey] || '').trim();
               if (oneDriveLink && !oneDriveLink.startsWith('http')) {
@@ -113,8 +113,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
               const expectedChangesKey = keys.find(k => {
                 const key = k.trim();
-                return key === 'การเปลี่ยนแปลงที่คาดหวัง' || key.toLowerCase().includes('expected');
-              }) || keys[11] || 'การเปลี่ยนแปลงที่คาดหวัง';
+                return key === 'การเปลี่ยนแปลง/ความคาดหวังของโครงการ' || key === 'การเปลี่ยนแปลงที่คาดหวัง' || key.toLowerCase().includes('expected');
+              }) || keys[12] || 'การเปลี่ยนแปลง/ความคาดหวังของโครงการ';
 
               const briefContentKey = keys.find(k => {
                 const key = k.trim();

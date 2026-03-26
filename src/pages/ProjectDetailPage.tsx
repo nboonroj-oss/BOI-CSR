@@ -51,28 +51,37 @@ export const ProjectDetailPage: React.FC = () => {
   };
 
   const handleAiSummarize = async () => {
-    if (!project.expectedChanges) return;
+    if (!project.expectedChanges && !project.oneDriveLink) return;
     
     setIsSummarizing(true);
     setAiSummary(null);
     try {
       const apiKey = process.env.GEMINI_API_KEY;
       
-      // If no API key is found, we'll try to proceed but catch the specific error
-      // This allows the platform's auto-injected key to work if available
       const ai = new GoogleGenAI({ apiKey: apiKey || "" });
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: `คุณเป็นผู้เชี่ยวชาญด้าน CSR และการพัฒนาชุมชน 
-        กรุณาสรุป "การเปลี่ยนแปลงที่คาดหวัง" ของโครงการนี้ให้กระชับ น่าสนใจ และดึงดูดใจบริษัทที่ต้องการสนับสนุนโครงการเพื่อสังคม
+        กรุณาสรุปข้อมูลโครงการโดยใช้ข้อมูลจาก "ความคาดหวังของโครงการ" และข้อมูลจากลิงก์ OneDrive (ถ้ามี) 
+        ให้สรุปด้วยเนื้อหาที่ smooth และต่อเนื่อง อ่านง่าย กระชับ ได้ใจความ ตามหัวข้อดังนี้:
+        
+        1. แนะนำกลุ่มวิสาหกิจชุมชนสั้นๆ (ไม่เกิน 3 บรรทัด)
+        2. กิจกรรมที่ทำในโครงการนี้
+        3. ปัญหาและความต้องการของชุมชน
+        4. ผลลัพธ์และความคาดหวังในการเปลี่ยนแปลงหลังจากโครงการนี้ประสบความสำเร็จ
+        5. เหตุผลที่บริษัทควรสนับสนุนโครงการนี้
         
         ข้อมูลโครงการ:
         ชื่อโครงการ: ${project.title}
         จังหวัด: ${project.province}
         กิจการ/ผลผลิต: ${project.product}
-        รายละเอียดเดิม: ${project.expectedChanges}
+        ความคาดหวังของโครงการ (เดิม): ${project.expectedChanges}
+        ลิงก์ข้อมูลเพิ่มเติม (OneDrive): ${project.oneDriveLink || 'ไม่มี'}
         
-        ให้สรุปเป็นข้อๆ (Bullet points) ประมาณ 3-4 ข้อ โดยเน้นที่ผลกระทบ (Impact) ที่จะเกิดขึ้นจริง`,
+        เน้นการเขียนที่ดึงดูดใจบริษัทที่ต้องการสนับสนุนโครงการเพื่อสังคม (CSR)`,
+        config: {
+          tools: project.oneDriveLink ? [{ urlContext: {} }] : []
+        }
       });
       
       if (response.text) {
@@ -219,10 +228,10 @@ export const ProjectDetailPage: React.FC = () => {
 
           <div className="space-y-6 pt-10 border-t border-surface-container-highest">
             <div className="flex items-center justify-between">
-              <h2 className="font-headline text-4xl font-bold text-on-surface">การเปลี่ยนแปลงที่คาดหวัง</h2>
+              <h2 className="font-headline text-4xl font-bold text-on-surface">ความคาดหวังของโครงการ</h2>
               <button 
                 onClick={handleAiSummarize}
-                disabled={isSummarizing || !project.expectedChanges}
+                disabled={isSummarizing || (!project.expectedChanges && !project.oneDriveLink)}
                 className="flex items-center gap-2 bg-primary/10 text-primary px-6 py-3 rounded-2xl font-bold hover:bg-primary/20 transition-all disabled:opacity-50 text-xl"
               >
                 {isSummarizing ? (
@@ -258,7 +267,7 @@ export const ProjectDetailPage: React.FC = () => {
               </motion.div>
             ) : (
               <div className="space-y-6 text-on-surface-variant text-2xl leading-relaxed max-w-4xl whitespace-pre-line">
-                {project.expectedChanges || 'ไม่มีข้อมูลการเปลี่ยนแปลงที่คาดหวัง'}
+                {project.expectedChanges || 'ไม่มีข้อมูลความคาดหวังของโครงการ'}
               </div>
             )}
           </div>
